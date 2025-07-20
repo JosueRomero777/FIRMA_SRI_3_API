@@ -1,0 +1,160 @@
+<?php
+
+$webRecepcion = 'https://celcer.sri.gob.ec/comprobantes-electronicos-ws/RecepcionComprobantesOffline?wsdl';
+$webAutoriza = 'https://celcer.sri.gob.ec/comprobantes-electronicos-ws/AutorizacionComprobantesOffline?wsdl';
+
+$dir_firmado = '/home/axcalle/Documents/coavpro/FIRMA_SRI_3/firmados/invoice_57c30d30-ac1a-40b7-931a-31f9f42cb53b.xml';
+$clave_a = "1807202501019511448100110010010000000061234567815";
+
+// Crear directorio para XMLs autorizados
+$rutaAutorizados = '/home/axcalle/Documents/coavpro/FIRMA_SRI_3/autorizados/';
+if (!is_dir($rutaAutorizados)) {
+    mkdir($rutaAutorizados, 0755, true);
+}
+
+$contenido = file_get_contents($dir_firmado);
+$parametros = array("xml" => $contenido);
+
+echo "=== PASO 1: RECEPCIÓN ===\n";
+try{
+    $webServiceRecepcion = new SoapClient($webRecepcion);
+    $result = $webServiceRecepcion->validarComprobante($parametros);
+    
+    if($result->RespuestaRecepcionComprobante->estado == "RECIBIDA"){
+        echo "✅ Comprobante RECIBIDO correctamente\n\n";
+    } else if($result->RespuestaRecepcionComprobante->estado == "DEVUELTA") {
+        // Verificar si es porque la clave ya está registrada
+        if(isset($result->RespuestaRecepcionComprobante->comprobantes->comprobante->mensajes->mensaje)) {
+            $mensaje = $result->RespuestaRecepcionComprobante->comprobantes->comprobante->mensajes->mensaje;
+            if($mensaje->identificador == 43 && strpos($mensaje->mensaje, 'CLAVE ACCESO REGISTRADA') !== false) {
+                echo "⚠️ Comprobante YA REGISTRADO en el SRI - Consultando autorización directamente\n\n";
+            } else {
+                echo "❌ Comprobante DEVUELTO por el SRI\n";
+                echo "Mensaje: " . $mensaje->mensaje . "\n";
+                print_r($result);
+                exit;
+            }
+        } else {
+            echo "❌ Error en recepción - Comprobante DEVUELTO\n";
+            print_r($result);
+            exit;
+        }
+    } else {
+        echo "❌ Error en recepción\n";
+        print_r($result);
+        exit;
+    }
+
+}catch(SoapFault $e){
+    echo "Error SOAP en recepción: " . $e->getMessage();
+    exit;
+}
+
+// Implementar reintentos con espera para la autorización
+$maxIntentos = 5;
+$intervalo = 15; // segundos
+$parametrosAutoriza = array("claveAccesoComprobante" => $clave_a);
+$autorizacionEncontrada = false;
+
+for ($intento = 1; $intento <= $maxIntentos; $intento++) {
+    echo "=== PASO 2: AUTORIZACIÓN (Intento $intento/$maxIntentos) ===\n";
+    
+    if ($intento > 1) {
+        echo "⏳ Esperando $intervalo segundos antes del siguiente intento...\n";
+        sleep($intervalo);
+    }
+
+    try{
+        $webServiceAutorizacion = new SoapClient($webAutoriza);
+        $result = $webServiceAutorizacion->autorizacionComprobante($parametrosAutoriza);
+    
+        // Verificar si hay autorizaciones
+        if(isset($result->RespuestaAutorizacionComprobante->autorizaciones->autorizacion)) {
+            $autorizacion = $result->RespuestaAutorizacionComprobante->autorizaciones->autorizacion;
+            $estado = $autorizacion->estado;
+            
+            echo "Estado: " . $estado . "\n";
+            
+            if($estado == "AUTORIZADO") {
+                echo "✅ Comprobante AUTORIZADO!\n";
+                $autorizacionEncontrada = true;
+                
+                // **EXTRAER Y GUARDAR EL XML AUTORIZADO**
+                $xmlAutorizado = $autorizacion->comprobante;
+                $fechaAutorizacion = $autorizacion->fechaAutorizacion;
+                $numeroAutorizacion = $autorizacion->numeroAutorizacion ?? $clave_a;
+                
+                // Crear nombre del archivo autorizado
+                $nombreArchivoOriginal = basename($dir_firmado, '.xml');
+                $nombreArchivoAutorizado = $nombreArchivoOriginal . '_AUTORIZADO.xml';
+                $rutaArchivoAutorizado = $rutaAutorizados . $nombreArchivoAutorizado;
+                
+                // **CREAR XML CON DATOS DE AUTORIZACIÓN**
+                $xmlConAutorizacion = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+                $xmlConAutorizacion .= '<autorizacion>' . "\n";
+                $xmlConAutorizacion .= '  <estado>' . $estado . '</estado>' . "\n";
+                $xmlConAutorizacion .= '  <numeroAutorizacion>' . $numeroAutorizacion . '</numeroAutorizacion>' . "\n";
+                $xmlConAutorizacion .= '  <fechaAutorizacion>' . $fechaAutorizacion . '</fechaAutorizacion>' . "\n";
+                $xmlConAutorizacion .= '  <ambiente>' . $autorizacion->ambiente . '</ambiente>' . "\n";
+                $xmlConAutorizacion .= '  <comprobante><![CDATA[' . $xmlAutorizado . ']]></comprobante>' . "\n";
+                $xmlConAutorizacion .= '</autorizacion>';
+                
+                // **GUARDAR ARCHIVO AUTORIZADO**
+                if (file_put_contents($rutaArchivoAutorizado, $xmlConAutorizacion)) {
+                    echo "✅ XML autorizado guardado en: $rutaArchivoAutorizado\n";
+                } else {
+                    echo "❌ Error al guardar XML autorizado\n";
+                }
+                
+                // **TAMBIÉN GUARDAR SOLO EL COMPROBANTE AUTORIZADO**
+                $rutaComprobanteAutorizado = $rutaAutorizados . $nombreArchivoOriginal . '_comprobante_autorizado.xml';
+                if (file_put_contents($rutaComprobanteAutorizado, $xmlAutorizado)) {
+                    echo "✅ Comprobante autorizado guardado en: $rutaComprobanteAutorizado\n";
+                }
+                
+                echo "\n=== INFORMACIÓN DE AUTORIZACIÓN ===\n";
+                echo "Número de autorización: " . $numeroAutorizacion . "\n";
+                echo "Fecha de autorización: " . $fechaAutorizacion . "\n";
+                echo "Ambiente: " . $autorizacion->ambiente . "\n";
+                echo "Clave de acceso: " . $clave_a . "\n";
+                break; // Salir del bucle si se autorizó correctamente
+                
+            } else if($estado == "EN PROCESO") {
+                echo "⏳ Comprobante EN PROCESO - Reintentando en el siguiente ciclo\n";
+            } else if($estado == "ERROR SECUENCIAL REGISTRADO") {
+                echo "❌ ERROR SECUENCIAL REGISTRADO\n";
+                if(isset($autorizacion->mensajes)) {
+                    print_r($autorizacion->mensajes);
+                }
+                break; // Error definitivo, no reintentar
+            } else {
+                echo "❓ Estado desconocido: " . $estado . "\n";
+                if(isset($autorizacion->mensajes)) {
+                    print_r($autorizacion->mensajes);
+                }
+            }
+        } else {
+            echo "⚠️ No se encontraron autorizaciones aún\n";
+            if ($intento < $maxIntentos) {
+                echo "🔄 Reintentando...\n\n";
+            }
+        }
+
+    }catch(SoapFault $e){
+        echo "Error SOAP en autorización: " . $e->getMessage() . "\n";
+        if ($intento < $maxIntentos) {
+            echo "🔄 Reintentando...\n\n";
+        }
+    }
+}
+
+// Verificar resultado final
+if (!$autorizacionEncontrada) {
+    echo "\n❌ No se pudo obtener la autorización después de $maxIntentos intentos\n";
+    echo "💡 Sugerencias:\n";
+    echo "   - Verifica el estado del comprobante en el portal del SRI\n";
+    echo "   - Revisa que la clave de acceso sea correcta\n";
+    echo "   - El comprobante podría estar en proceso o rechazado\n";
+}
+
+?>

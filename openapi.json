@@ -1,0 +1,111 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "API de Firma Electrónica SRI",
+    "version": "1.0.0",
+    "description": "API para firmar y autorizar documentos electrónicos ante el SRI Ecuador"
+  },
+  "paths": {
+    "/api/facturacion/procesar": {
+      "post": {
+        "summary": "Procesa un documento XML, lo firma y autoriza",
+        "tags": ["Facturación"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["archivo_xml", "certificado_p12", "clave_certificado"],
+                "properties": {
+                  "archivo_xml": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Archivo XML a firmar y autorizar"
+                  },
+                  "certificado_p12": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Archivo .p12 del certificado"
+                  },
+                  "clave_certificado": {
+                    "type": "string",
+                    "description": "Contraseña del certificado"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Documento procesado exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "documento_firmado": {
+                          "type": "string",
+                          "example": "<xml>...</xml>"
+                        },
+                        "numero_autorizacion": {
+                          "type": "string",
+                          "example": "1234567890"
+                        },
+                        "fecha_autorizacion": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "ruta_guardado": {
+                          "type": "string",
+                          "example": "/var/www/facturacion/autorizados/documento_autorizado.xml"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error en la solicitud",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "INVALID_REQUEST"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "Faltan campos requeridos"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
