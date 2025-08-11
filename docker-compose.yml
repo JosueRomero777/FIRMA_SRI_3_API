@@ -19,7 +19,11 @@ services:
       - APP_DEBUG=0
     networks:
       - sri_network
+      - facturacion-network
 
 networks:
   sri_network:
     driver: bridge
+  facturacion-network:
+    driver: bridge
+    external: true
