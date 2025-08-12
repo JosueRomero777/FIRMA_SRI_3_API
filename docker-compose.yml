@@ -10,7 +10,7 @@ services:
       - ./var/cache:/var/www/html/var/cache
       - ./var/tmp:/var/www/html/var/tmp
       - /var/www/facturacion/autorizados:/var/www/facturacion/autorizados
-      - /home/axcalle/Documents/coavpro/FIRMA_SRI_3_API/var/www/facturacion:/home/axcalle/Documents/coavpro/FIRMA_SRI_3_API/var/www/facturacion
+      - /var/facturacion/xml_signed:/var/facturacion/xml_signed
     ports:
       - "8001:80"
     environment:
