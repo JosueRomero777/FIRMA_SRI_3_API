@@ -9,8 +9,8 @@ services:
       - ./var/log:/var/www/html/var/log
       - ./var/cache:/var/www/html/var/cache
       - ./var/tmp:/var/www/html/var/tmp
-      - /var/facturacion/autorizados:/var/facturacion/autorizados
-      - /var/facturacion/xml_signed:/var/facturacion/xml_signed
+      - /var/facturacion/autorizados:/app/autorizados
+      - /var/facturacion/xml_signed:/app/xml_signed
     ports:
       - "8001:80"
     environment:
