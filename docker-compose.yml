@@ -9,7 +9,7 @@ services:
       - ./var/log:/var/www/html/var/log
       - ./var/cache:/var/www/html/var/cache
       - ./var/tmp:/var/www/html/var/tmp
-      - /var/www/facturacion/autorizados:/var/www/facturacion/autorizados
+      - /var/facturacion/autorizados:/var/facturacion/autorizados
       - /var/facturacion/xml_signed:/var/facturacion/xml_signed
     ports:
       - "8001:80"
