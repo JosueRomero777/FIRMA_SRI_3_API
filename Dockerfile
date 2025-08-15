@@ -35,9 +35,15 @@ RUN composer install --no-dev --optimize-autoloader
 # Crear directorios necesarios y configurar permisos
 RUN mkdir -p /var/www/html/storage/framework/{sessions,views,cache} \
     && mkdir -p /var/www/html/bootstrap/cache \
+    && mkdir -p /var/www/facturacion/autorizados \
+    && mkdir -p /var/tmp \
     && chown -R www-data:www-data /var/www/html \
+    && chown -R www-data:www-data /var/www/facturacion \
+    && chown -R www-data:www-data /var/tmp \
     && chmod -R 775 /var/www/html/storage \
-    && chmod -R 775 /var/www/html/bootstrap/cache
+    && chmod -R 775 /var/www/html/bootstrap/cache \
+    && chmod -R 775 /var/www/facturacion \
+    && chmod -R 775 /var/tmp
 
 # Configurar el punto de entrada
 COPY docker-entrypoint.sh /usr/local/bin/

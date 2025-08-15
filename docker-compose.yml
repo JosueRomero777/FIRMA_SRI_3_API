@@ -9,8 +9,11 @@ services:
       - ./var/log:/var/www/html/var/log
       - ./var/cache:/var/www/html/var/cache
       - ./var/tmp:/var/www/html/var/tmp
-      - /var/facturacion/autorizados:/app/autorizados
-      - /var/facturacion/xml_signed:/app/xml_signed
+      - ${HOME}/sri-facturacion/autorizados:/var/www/facturacion/autorizados
+      - ${HOME}/sri-facturacion/firmados:/var/www/facturacion/firmados
+      - ${HOME}/sri-facturacion/sin_firma:/var/www/facturacion/sin_firma
+      - ${HOME}/sri-facturacion/temporales:/var/www/facturacion/temporales
+      - ${HOME}/sri-facturacion/logs:/var/www/facturacion/logs
     ports:
       - "8001:80"
     environment:

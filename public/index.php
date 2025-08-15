@@ -7,6 +7,9 @@ use Tuupola\Middleware\CorsMiddleware;
 
 require __DIR__ . '/../vendor/autoload.php';
 
+// Cargar variables de entorno
+require_once __DIR__ . '/../config/env.php';
+
 // Configurar OpenSSL para algoritmos legacy ANTES de cualquier operación
 if (version_compare(OPENSSL_VERSION_NUMBER, '0x30000000', '>=')) {
     $tempDir = sys_get_temp_dir();

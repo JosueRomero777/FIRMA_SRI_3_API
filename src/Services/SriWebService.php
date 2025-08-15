@@ -126,14 +126,21 @@ class SriWebService
             // Guardar el comprobante autorizado si está disponible y autorizado
             $rutaArchivo = null;
             if (isset($autorizacion->comprobante) && !empty($autorizacion->comprobante) && $autorizacion->estado === "AUTORIZADO") {
-                $directorioAutorizados = '/var/www/facturacion/autorizados'; // Ajusta según tu ruta
+                $directorioAutorizados = '/var/www/facturacion/autorizados';
                 if (!is_dir($directorioAutorizados)) {
-                    mkdir($directorioAutorizados, 0755, true);
+                    if (!mkdir($directorioAutorizados, 0755, true) && !is_dir($directorioAutorizados)) {
+                        error_log("Error al crear directorio de autorizados en SriWebService: {$directorioAutorizados}");
+                        throw new \Exception("No se pudo crear el directorio de autorizados: {$directorioAutorizados}");
+                    }
                 }
 
                 $nombreArchivo = $claveAcceso . '_autorizado.xml';
                 $rutaArchivo = $directorioAutorizados . '/' . $nombreArchivo;
-                file_put_contents($rutaArchivo, $autorizacion->comprobante);
+                
+                if (file_put_contents($rutaArchivo, $autorizacion->comprobante) === false) {
+                    error_log("Error al guardar archivo autorizado: {$rutaArchivo}");
+                    throw new \Exception("No se pudo guardar el archivo autorizado: {$rutaArchivo}");
+                }
             }
 
             return [

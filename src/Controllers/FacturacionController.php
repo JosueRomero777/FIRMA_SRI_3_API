@@ -17,9 +17,13 @@ class FacturacionController
 
     public function __construct()
     {
-        // Rutas absolutas para directorios de archivos
+        // Rutas fijas dentro del contenedor (los volúmenes mapean a las rutas del host)
         $this->directorioAutorizados = '/var/www/facturacion/autorizados';
-        $this->directorioTemporal = '/var/tmp';
+        $this->directorioTemporal = $_ENV['UPLOAD_DIR'] ?? '/var/www/html/var/tmp';
+
+        // Remover la barra final si existe para consistencia
+        $this->directorioAutorizados = rtrim($this->directorioAutorizados, '/');
+        $this->directorioTemporal = rtrim($this->directorioTemporal, '/');
 
         // Instanciación de servicios
         $this->sriService = new SriWebService();
@@ -376,14 +380,21 @@ class FacturacionController
     /**
      * Crea los directorios necesarios si no existen.
      * @return void
+     * @throws \Exception Si no se pueden crear los directorios
      */
     private function crearDirectorios(): void
     {
         if (!is_dir($this->directorioAutorizados)) {
-            mkdir($this->directorioAutorizados, 0755, true);
+            if (!mkdir($this->directorioAutorizados, 0755, true) && !is_dir($this->directorioAutorizados)) {
+                error_log("Error al crear directorio de autorizados: {$this->directorioAutorizados}");
+                throw new \Exception("No se pudo crear el directorio de autorizados: {$this->directorioAutorizados}");
+            }
         }
         if (!is_dir($this->directorioTemporal)) {
-            mkdir($this->directorioTemporal, 0755, true);
+            if (!mkdir($this->directorioTemporal, 0755, true) && !is_dir($this->directorioTemporal)) {
+                error_log("Error al crear directorio temporal: {$this->directorioTemporal}");
+                throw new \Exception("No se pudo crear el directorio temporal: {$this->directorioTemporal}");
+            }
         }
     }
 
