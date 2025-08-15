@@ -18,8 +18,8 @@ class FacturacionController
     public function __construct()
     {
         // Rutas absolutas para directorios de archivos
-        $this->directorioAutorizados = '/var/www/html/var/www/facturacion/autorizados';
-        $this->directorioTemporal = '/var/www/html/var/tmp';
+        $this->directorioAutorizados = '/var/www/facturacion/autorizados';
+        $this->directorioTemporal = '/var/tmp';
 
         // Instanciación de servicios
         $this->sriService = new SriWebService();

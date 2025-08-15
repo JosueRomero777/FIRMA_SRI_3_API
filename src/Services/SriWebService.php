@@ -126,7 +126,7 @@ class SriWebService
             // Guardar el comprobante autorizado si está disponible y autorizado
             $rutaArchivo = null;
             if (isset($autorizacion->comprobante) && !empty($autorizacion->comprobante) && $autorizacion->estado === "AUTORIZADO") {
-                $directorioAutorizados = '/var/www/html/var/www/facturacion/autorizados'; // Ajusta según tu ruta
+                $directorioAutorizados = '/var/www/facturacion/autorizados'; // Ajusta según tu ruta
                 if (!is_dir($directorioAutorizados)) {
                     mkdir($directorioAutorizados, 0755, true);
                 }
