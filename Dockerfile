@@ -28,6 +28,9 @@ WORKDIR /var/www/html
 # Copiar el código fuente
 COPY . .
 
+# Configurar Apache para Slim Framework
+COPY apache-slim.conf /etc/apache2/sites-available/000-default.conf
+
 # Instalar dependencias de Composer
 COPY --from=composer:latest /usr/bin/composer /usr/local/bin/composer
 RUN composer install --no-dev --optimize-autoloader
