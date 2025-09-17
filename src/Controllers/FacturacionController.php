@@ -176,7 +176,7 @@ class FacturacionController
                 }
 
                 try {
-                    $autorizacionResult = $this->sriService->consultarAutorizacion($claveAcceso);
+                    $autorizacionResult = $this->sriService->consultarAutorizacion($claveAcceso, $xmlFirmado);
 
                     if ($autorizacionResult['estado'] == 'AUTORIZADO') {
                         $autorizacionExitosa = true;
@@ -509,7 +509,7 @@ class FacturacionController
                 }
 
                 try {
-                    $autorizacionResult = $this->sriService->consultarAutorizacion($claveAcceso);
+                    $autorizacionResult = $this->sriService->consultarAutorizacion($claveAcceso, $xmlFirmado);
 
                     if ($autorizacionResult['estado'] == 'AUTORIZADO') {
                         $autorizacionExitosa = true;

@@ -24,6 +24,38 @@ class SriWebService
     }
 
     /**
+     * Detecta el ambiente del XML basado en el contenido
+     * @param string $xmlContent El contenido del XML
+     * @return string '1' para pruebas, '2' para producción
+     */
+    private function detectarAmbienteFromXml(string $xmlContent): string
+    {
+        // Buscar el tag <ambiente> en el XML
+        if (preg_match('/<ambiente>([12])<\/ambiente>/', $xmlContent, $matches)) {
+            return $matches[1];
+        }
+
+        // Si no encuentra el tag, usar el ambiente por defecto
+        return $this->ambiente;
+    }
+
+    /**
+     * Configura las URLs del servicio basado en el ambiente
+     * @param string $ambiente '1' para pruebas, '2' para producción
+     */
+    private function configurarUrls(string $ambiente): void
+    {
+        $this->ambiente = $ambiente;
+        if ($this->ambiente == '2') {
+            $this->webRecepcion = 'https://cel.sri.gob.ec/comprobantes-electronicos-ws/RecepcionComprobantesOffline?wsdl';
+            $this->webAutoriza = 'https://cel.sri.gob.ec/comprobantes-electronicos-ws/AutorizacionComprobantesOffline?wsdl';
+        } else {
+            $this->webRecepcion = 'https://celcer.sri.gob.ec/comprobantes-electronicos-ws/RecepcionComprobantesOffline?wsdl';
+            $this->webAutoriza = 'https://celcer.sri.gob.ec/comprobantes-electronicos-ws/AutorizacionComprobantesOffline?wsdl';
+        }
+    }
+
+    /**
      * Envía un documento al SRI para su recepción
      * @param string $contenidoXml El contenido del XML firmado.
      * @return array Un array con el estado y los mensajes si hay errores.
@@ -31,6 +63,10 @@ class SriWebService
      */
     public function enviarRecepcion(string $contenidoXml): array
     {
+        // Detectar el ambiente del XML y configurar URLs automáticamente
+        $ambienteDetectado = $this->detectarAmbienteFromXml($contenidoXml);
+        $this->configurarUrls($ambienteDetectado);
+
         try {
             $webService = new \SoapClient($this->webRecepcion);
             $resultado = $webService->validarComprobante(["xml" => $contenidoXml]);
@@ -81,11 +117,18 @@ class SriWebService
      * Guarda el XML autorizado si el estado es 'AUTORIZADO'.
      *
      * @param string $claveAcceso La clave de acceso del comprobante.
+     * @param string|null $xmlContent Contenido XML opcional para detectar ambiente
      * @return array Un array con los detalles de la autorización.
      * @throws Exception Si hay un error en la comunicación SOAP o la clave de acceso no es válida.
      */
-    public function consultarAutorizacion(string $claveAcceso): array
+    public function consultarAutorizacion(string $claveAcceso, string $xmlContent = null): array
     {
+        // Si se proporciona contenido XML, detectar ambiente y configurar URLs
+        if ($xmlContent !== null) {
+            $ambienteDetectado = $this->detectarAmbienteFromXml($xmlContent);
+            $this->configurarUrls($ambienteDetectado);
+        }
+
         try {
             $webService = new \SoapClient($this->webAutoriza);
             $resultado = $webService->autorizacionComprobante([
