@@ -79,7 +79,7 @@ class FacturacionController
      * @OA\Property(property="estado", type="string", example="AUTORIZADO"),
      * @OA\Property(property="numero_autorizacion", type="string", example="1234567890"),
      * @OA\Property(property="fecha_autorizacion", type="string", example="18/07/2025 15:00:00"),
-     * @OA\Property(property="xml_autorizado_base64", type="string", description="XML autorizado en base64"),
+     * @OA\Property(property="xml_autorizado_base64", type="string", description="XML autorizado completo del SRI en base64 (incluye estado, número autorización, fecha, etc.)"),
      * @OA\Property(property="ruta_archivo_guardado", type="string", description="Ruta donde se guardó el XML autorizado")
      * )
      * )
@@ -445,7 +445,7 @@ class FacturacionController
      *                 @OA\Property(property="estado", type="string", example="AUTORIZADO"),
      *                 @OA\Property(property="numero_autorizacion", type="string", example="1234567890"),
      *                 @OA\Property(property="fecha_autorizacion", type="string", example="18/07/2025 15:00:00"),
-     *                 @OA\Property(property="xml_autorizado_base64", type="string", description="XML autorizado en base64"),
+     *                 @OA\Property(property="xml_autorizado_base64", type="string", description="XML autorizado completo del SRI en base64 (incluye estado, número autorización, fecha, etc.)"),
      *                 @OA\Property(property="ruta_archivo_guardado", type="string", description="Ruta donde se guardó el XML autorizado")
      *             )
      *         )

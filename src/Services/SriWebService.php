@@ -168,6 +168,7 @@ class SriWebService
 
             // Guardar el comprobante autorizado si está disponible y autorizado
             $rutaArchivo = null;
+            $xmlAutorizadoCompleto = null;
             if (isset($autorizacion->comprobante) && !empty($autorizacion->comprobante) && $autorizacion->estado === "AUTORIZADO") {
                 $directorioAutorizados = '/var/www/facturacion/autorizados';
                 if (!is_dir($directorioAutorizados)) {
@@ -177,10 +178,13 @@ class SriWebService
                     }
                 }
 
+                // Construir el XML autorizado completo con toda la información del SRI
+                $xmlAutorizadoCompleto = $this->construirXmlAutorizado($autorizacion);
+
                 $nombreArchivo = $claveAcceso . '_autorizado.xml';
                 $rutaArchivo = $directorioAutorizados . '/' . $nombreArchivo;
-                
-                if (file_put_contents($rutaArchivo, $autorizacion->comprobante) === false) {
+
+                if (file_put_contents($rutaArchivo, $xmlAutorizadoCompleto) === false) {
                     error_log("Error al guardar archivo autorizado: {$rutaArchivo}");
                     throw new \Exception("No se pudo guardar el archivo autorizado: {$rutaArchivo}");
                 }
@@ -191,7 +195,7 @@ class SriWebService
                 'numero_autorizacion' => $autorizacion->numeroAutorizacion ?? $claveAcceso,
                 'fecha_autorizacion' => $autorizacion->fechaAutorizacion ?? null,
                 'ambiente' => $autorizacion->ambiente ?? null,
-                'comprobante' => $autorizacion->comprobante ?? null, // El XML completo si está autorizado
+                'comprobante' => $xmlAutorizadoCompleto ?? $autorizacion->comprobante, // El XML autorizado completo o el original si no está autorizado
                 'mensajes' => $mensajesParsed, // Mensajes ya parseados
                 'ruta_archivo' => $rutaArchivo // Ruta donde se guardó el XML (si fue autorizado)
             ];
@@ -214,5 +218,49 @@ class SriWebService
             }
             throw new \Exception("Error SOAP al consultar autorización: " . $e->getMessage(), $e->getCode(), $e);
         }
+    }
+
+    /**
+     * Construye el XML autorizado completo con toda la información del SRI
+     * @param object $autorizacion Objeto de autorización devuelto por el SRI
+     * @return string XML autorizado completo en formato estándar del SRI
+     */
+    private function construirXmlAutorizado($autorizacion): string
+    {
+        // Determinar el texto del ambiente
+        $ambienteTexto = ($autorizacion->ambiente === '2') ? 'PRODUCCION' : 'PRUEBAS';
+
+        // Construir mensajes XML si existen
+        $mensajesXml = '';
+        if (isset($autorizacion->mensajes->mensaje)) {
+            $mensajesXml = '<mensajes>';
+            $mensajes = is_array($autorizacion->mensajes->mensaje) ?
+                       $autorizacion->mensajes->mensaje : [$autorizacion->mensajes->mensaje];
+
+            foreach ($mensajes as $mensaje) {
+                $mensajesXml .= '<mensaje>';
+                $mensajesXml .= '<identificador>' . htmlspecialchars($mensaje->identificador ?? '') . '</identificador>';
+                $mensajesXml .= '<mensaje>' . htmlspecialchars($mensaje->mensaje ?? '') . '</mensaje>';
+                $mensajesXml .= '<informacionAdicional>' . htmlspecialchars($mensaje->informacionAdicional ?? '') . '</informacionAdicional>';
+                $mensajesXml .= '<tipo>' . htmlspecialchars($mensaje->tipo ?? '') . '</tipo>';
+                $mensajesXml .= '</mensaje>';
+            }
+            $mensajesXml .= '</mensajes>';
+        } else {
+            $mensajesXml = '<mensajes/>';
+        }
+
+        // Construir el XML autorizado completo según el formato estándar del SRI
+        $xmlAutorizado = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+        $xmlAutorizado .= '<autorizacion>' . "\n";
+        $xmlAutorizado .= '    <estado>' . htmlspecialchars($autorizacion->estado) . '</estado>' . "\n";
+        $xmlAutorizado .= '    <numeroAutorizacion>' . htmlspecialchars($autorizacion->numeroAutorizacion ?? '') . '</numeroAutorizacion>' . "\n";
+        $xmlAutorizado .= '    <fechaAutorizacion>' . htmlspecialchars($autorizacion->fechaAutorizacion ?? '') . '</fechaAutorizacion>' . "\n";
+        $xmlAutorizado .= '    <ambiente>' . $ambienteTexto . '</ambiente>' . "\n";
+        $xmlAutorizado .= '    <comprobante><![CDATA[' . $autorizacion->comprobante . ']]></comprobante>' . "\n";
+        $xmlAutorizado .= '    ' . $mensajesXml . "\n";
+        $xmlAutorizado .= '</autorizacion>';
+
+        return $xmlAutorizado;
     }
 }
