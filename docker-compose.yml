@@ -14,12 +14,14 @@ services:
       - ${HOME}/sri-facturacion/sin_firma:/var/www/facturacion/sin_firma
       - ${HOME}/sri-facturacion/temporales:/var/www/facturacion/temporales
       - ${HOME}/sri-facturacion/logs:/var/www/facturacion/logs
+      - /etc/localtime:/etc/localtime:ro
     ports:
       - "8001:80"
     environment:
       - OPENSSL_CONF=/var/www/html/openssl_legacy.cnf
       - APP_ENV=prod
       - APP_DEBUG=0
+      - TZ=America/Guayaquil
     networks:
       - sri_network
       - facturacion-network

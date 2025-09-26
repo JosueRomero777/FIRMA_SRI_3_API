@@ -135,7 +135,20 @@ class FacturacionController
 
             $xmlContent = file_get_contents($xmlPath);
 
+            // DEBUG: Log del XML recibido para diagnosticar problema de clave de acceso
+            error_log("=== DEBUG XML RECIBIDO ===");
+            error_log("XML Content: " . substr($xmlContent, 0, 500) . "...");
+            if (preg_match('/<claveAcceso>(.*?)<\/claveAcceso>/', $xmlContent, $debugMatches)) {
+                error_log("Clave de acceso en XML recibido: " . $debugMatches[1]);
+            } else {
+                error_log("ERROR: No se encontró claveAcceso en XML recibido");
+            }
+            error_log("=== FIN DEBUG XML RECIBIDO ===");
+
+
             // 1. Firmar el XML
+            error_log("=== DEBUG PROCESO FIRMA ===");
+            error_log("Iniciando proceso de firma...");
             try {
                 $xmlFirmado = $this->signatureService->firmar(
                     $xmlContent,
@@ -143,7 +156,9 @@ class FacturacionController
                     $claveCertificado,
                     $tipoDocumento // Pasar el tipo de documento aquí
                 );
+                error_log("✅ XML firmado exitosamente. Longitud: " . strlen($xmlFirmado));
             } catch (\Exception $e) {
+                error_log("❌ ERROR AL FIRMAR: " . $e->getMessage());
                 return $this->errorResponse($response, 'Error al firmar el XML: ' . $e->getMessage(), 'ERROR_FIRMA');
             }
 
@@ -154,15 +169,39 @@ class FacturacionController
             $claveAcceso = $matches[1];
 
             // 2. Enviar a recepción del SRI
+            error_log("=== DEBUG PROCESO RECEPCION SRI ===");
+            error_log("Enviando XML al SRI para recepción...");
             try {
                 $recepcionResult = $this->sriService->enviarRecepcion($xmlFirmado);
+                error_log("✅ XML recibido por SRI exitosamente");
                 // Si la recepción no es 'RECIBIDA', la excepción ya debería haber sido lanzada por SriWebService
                 // Si llegó aquí, fue RECIBIDA.
             } catch (\Exception $e) {
-                return $this->errorResponse($response, 'Error en la recepción del SRI: ' . $e->getMessage(), 'ERROR_RECEPCION_SRI');
+                error_log("❌ ERROR EN RECEPCION SRI: " . $e->getMessage());
+
+                // Parsear los mensajes de error del SRI si están en JSON
+                $errorDetails = [];
+                if (strpos($e->getMessage(), '[{') !== false) {
+                    $jsonStart = strpos($e->getMessage(), '[{');
+                    $jsonString = substr($e->getMessage(), $jsonStart);
+                    $jsonEnd = strrpos($jsonString, '}]') + 2;
+                    $jsonString = substr($jsonString, 0, $jsonEnd);
+
+                    try {
+                        $errorDetails = json_decode($jsonString, true);
+                    } catch (\Exception $jsonError) {
+                        // Si no se puede parsear, usar el mensaje original
+                    }
+                }
+
+                return $this->errorResponse($response, 'Error en la recepción del SRI: ' . $e->getMessage(), 'ERROR_RECEPCION_SRI', 400, [
+                    'sri_error_details' => $errorDetails
+                ]);
             }
 
             // 3. Consultar autorización (con reintentos)
+            error_log("=== DEBUG PROCESO AUTORIZACION SRI ===");
+            error_log("Consultando autorización para clave: " . $claveAcceso);
             $maxIntentos = 10; // Puedes ajustar este valor
             $intervalo = 5; // Segundos entre intentos
 

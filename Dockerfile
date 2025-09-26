@@ -1,6 +1,6 @@
 FROM php:8.4-apache
 
-# Instalar dependencias del sistema
+# Instalar dependencias del sistema incluyendo tzdata
 RUN apt-get update && apt-get install -y \
     libxml2-dev \
     libssl-dev \
@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y \
     libzip-dev \
     unzip \
     git \
+    tzdata \
     && docker-php-ext-install -j$(nproc) \
         pdo \
         pdo_mysql \
@@ -18,6 +19,10 @@ RUN apt-get update && apt-get install -y \
         zip \
         soap \
     && docker-php-ext-enable opcache
+
+# Configurar timezone de Ecuador a nivel de sistema
+ENV TZ=America/Guayaquil
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 # Habilitar módulos de Apache
 RUN a2enmod rewrite headers

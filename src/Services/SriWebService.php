@@ -139,7 +139,7 @@ class SriWebService
                 // Podría significar "EN PROCESO" o clave de acceso no encontrada aún
                 return [
                     'estado' => 'EN PROCESO', // Asumimos EN PROCESO si no hay autorización aún
-                    'numero_autorizacion' => null,
+                    'numero_autorizacion' => $claveAcceso, // Mantener la clave original
                     'fecha_autorizacion' => null,
                     'ambiente' => null,
                     'comprobante' => null,
@@ -192,7 +192,7 @@ class SriWebService
 
             return [
                 'estado' => $autorizacion->estado,
-                'numero_autorizacion' => $autorizacion->numeroAutorizacion ?? $claveAcceso,
+                'numero_autorizacion' => $claveAcceso, // Usar siempre la clave de acceso original
                 'fecha_autorizacion' => $autorizacion->fechaAutorizacion ?? null,
                 'ambiente' => $autorizacion->ambiente ?? null,
                 'comprobante' => $xmlAutorizadoCompleto ?? $autorizacion->comprobante, // El XML autorizado completo o el original si no está autorizado
@@ -208,7 +208,7 @@ class SriWebService
                 error_log("SoapFault conocido en consultarAutorizacion para clave {$claveAcceso}: " . $e->getMessage());
                 return [
                     'estado' => 'EN PROCESO', // Considerarlo EN PROCESO si el SRI dice que no lo ha encontrado aún
-                    'numero_autorizacion' => null,
+                    'numero_autorizacion' => $claveAcceso, // Mantener la clave original
                     'fecha_autorizacion' => null,
                     'ambiente' => null,
                     'comprobante' => null,
