@@ -80,6 +80,9 @@ $app->group('/api/facturacion', function ($group) {
 
     // Nueva ruta para enviar documentos ya firmados al SRI
     $group->post('/enviar-sri', \App\Controllers\FacturacionController::class . ':enviarASri');
+    
+    // Nueva ruta para consultar estado de autorización
+    $group->post('/consultar-autorizacion', \App\Controllers\FacturacionController::class . ':consultarAutorizacion');
 });
 
 $app->run();

@@ -602,6 +602,98 @@ class FacturacionController
     }
 
     /**
+     * @OA\Post(
+     * path="/api/facturacion/consultar-autorizacion",
+     * summary="Consulta el estado de autorización de un comprobante en el SRI",
+     * tags={"Facturación"},
+     * @OA\RequestBody(
+     * required=true,
+     * @OA\MediaType(
+     * mediaType="application/json",
+     * @OA\Schema(
+     * required={"clave_acceso"},
+     * @OA\Property(
+     * property="clave_acceso",
+     * type="string",
+     * description="Clave de acceso del comprobante (49 dígitos)"
+     * )
+     * )
+     * )
+     * ),
+     * @OA\Response(
+     * response=200,
+     * description="Consulta realizada exitosamente",
+     * @OA\JsonContent(
+     * @OA\Property(property="success", type="boolean", example=true),
+     * @OA\Property(property="data", type="object",
+     * @OA\Property(property="estado", type="string", example="AUTORIZADO"),
+     * @OA\Property(property="numero_autorizacion", type="string", example="1234567890"),
+     * @OA\Property(property="fecha_autorizacion", type="string", example="18/07/2025 15:00:00"),
+     * @OA\Property(property="ambiente", type="string", example="PRUEBAS"),
+     * @OA\Property(property="xml_autorizado_base64", type="string", description="XML autorizado en base64 (si está autorizado)"),
+     * @OA\Property(property="mensajes", type="array", @OA\Items(type="object"))
+     * )
+     * )
+     * ),
+     * @OA\Response(
+     * response=400,
+     * description="Error en la consulta",
+     * @OA\JsonContent(
+     * @OA\Property(property="success", type="boolean", example=false),
+     * @OA\Property(property="error", type="object",
+     * @OA\Property(property="code", type="string"),
+     * @OA\Property(property="message", type="string")
+     * )
+     * )
+     * )
+     * )
+     */
+    public function consultarAutorizacion(Request $request, Response $response): Response
+    {
+        try {
+            $postData = $request->getParsedBody();
+
+            if (empty($postData['clave_acceso'])) {
+                return $this->errorResponse($response, 'La clave de acceso es requerida.', 'MISSING_CLAVE_ACCESO', 400);
+            }
+
+            $claveAcceso = $postData['clave_acceso'];
+
+            error_log("=== DEBUG CONSULTA AUTORIZACION ===");
+            error_log("Consultando estado de clave: " . $claveAcceso);
+
+            // Consultar el estado en el SRI (sin XML porque es solo consulta)
+            $autorizacionResult = $this->sriService->consultarAutorizacion($claveAcceso);
+
+            error_log("Estado obtenido: " . $autorizacionResult['estado']);
+
+            // Preparar respuesta
+            $responseData = [
+                'estado' => $autorizacionResult['estado'],
+                'numero_autorizacion' => $autorizacionResult['numero_autorizacion'],
+                'fecha_autorizacion' => $autorizacionResult['fecha_autorizacion'],
+                'ambiente' => $autorizacionResult['ambiente'],
+                'mensajes' => $autorizacionResult['mensajes'] ?? []
+            ];
+
+            // Si está autorizado, incluir el XML
+            if ($autorizacionResult['estado'] === 'AUTORIZADO' && !empty($autorizacionResult['comprobante'])) {
+                $responseData['xml_autorizado_base64'] = base64_encode($autorizacionResult['comprobante']);
+            }
+
+            $response->getBody()->write(json_encode([
+                'success' => true,
+                'data' => $responseData
+            ]));
+            return $response->withHeader('Content-Type', 'application/json')->withStatus(200);
+
+        } catch (\Exception $e) {
+            error_log("Error en consultarAutorizacion: " . $e->getMessage());
+            return $this->errorResponse($response, 'Error al consultar autorización: ' . $e->getMessage(), 'ERROR_CONSULTA', 500);
+        }
+    }
+
+    /**
      * Devuelve una respuesta de error estandarizada en formato JSON.
      * @param Response $response Objeto de respuesta PSR-7.
      * @param string $message Mensaje de error.
